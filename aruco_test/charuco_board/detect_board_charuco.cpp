@@ -7,7 +7,6 @@
 using namespace std;
 using namespace cv;
 
-
 namespace {
 	const char* about = "Pose estimation using a ChArUco board";
 	const char* keys  =
@@ -37,7 +36,6 @@ static bool readCameraParameters(string filename, Mat &camMatrix, Mat &distCoeff
 	fs["distortion_coefficients"] >> distCoeffs;
 	return true;
 }
-
 
 /**
  */
@@ -101,6 +99,17 @@ int main(int argc, char *argv[]) {
 			return 0;
 		}
 	}
+
+	/* New Code
+	CameraPose cameraPose;
+	std::string msg_str;
+	zmq::message_t request;
+
+	//  Prepare our context and socket
+	zmq::context_t context (1);
+	// Note we use here a PAIR socket, only 1 way message
+	zmq::socket_t socket (context, ZMQ_PAIR);
+	 */
 
 	Ptr<aruco::DetectorParameters> detectorParams = aruco::DetectorParameters::create();
 	if(parser.has("dp")) {
