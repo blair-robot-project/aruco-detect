@@ -200,16 +200,31 @@ int main(int argc, char *argv[]) {
 		char key = (char)waitKey(waitTime);
 		if(key == 27) break;
 	}
+
 	/*
 	//New Code:
+	GOOGLE_PROTOBUF_VERIFY_VERSION;
+
+	vector<Point3f> objPoints(4);
+	objPoints[0] = Point3f(0,0,0);
+	objPoints[1] = Point3f(2,0,0);
+	objPoints[2] = Point3f(0,5.75,0);
+	objPoints[3] = Point3f(2,5.75,0);
+
+	Mat3b frame, goodFrame;
+	Mat cameraMatrix, distCoeff;
+	Mat1b threshed;
+	Mat1f poseMat;
+//	threshholder threshholder(gpu::createGaussianFilter_GPU(CV_8UC3, Size(5,5), 0, 0), Vec3b(40, 135, 55),
+//	                          Vec3b(60, 255, 160));
+	threshholder threshholder(gpu::createGaussianFilter_GPU(CV_8UC3, Size(5,5), 0, 0), Vec3b(66, 254, 102),
+	                          Vec3b(91, 255, 162));
+	contour_finder contourFinder(CHAIN_APPROX_SIMPLE);
+	vector<Point> cont;
+	vector<Point2f> points(4);
+	int width, height;
 	CameraPose cameraPose;
 	std::string msg_str;
 	zmq::message_t request;
-
-	//  Prepare our context and socket
-	zmq::context_t context (1);
-	// Note we use here a PAIR socket, only 1 way message
-	zmq::socket_t socket (context, ZMQ_PAIR);
-	*/
-	return 0;
+	 */
 }
