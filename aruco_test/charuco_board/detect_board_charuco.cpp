@@ -100,17 +100,6 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	/* New Code
-	CameraPose cameraPose;
-	std::string msg_str;
-	zmq::message_t request;
-
-	//  Prepare our context and socket
-	zmq::context_t context (1);
-	// Note we use here a PAIR socket, only 1 way message
-	zmq::socket_t socket (context, ZMQ_PAIR);
-	 */
-
 	Ptr<aruco::DetectorParameters> detectorParams = aruco::DetectorParameters::create();
 	if(parser.has("dp")) {
 		bool readOk = readDetectorParameters(parser.get<string>("dp"), detectorParams);
@@ -211,5 +200,16 @@ int main(int argc, char *argv[]) {
 		char key = (char)waitKey(waitTime);
 		if(key == 27) break;
 	}
+	/*
+	//New Code:
+	CameraPose cameraPose;
+	std::string msg_str;
+	zmq::message_t request;
+
+	//  Prepare our context and socket
+	zmq::context_t context (1);
+	// Note we use here a PAIR socket, only 1 way message
+	zmq::socket_t socket (context, ZMQ_PAIR);
+	*/
 	return 0;
 }
