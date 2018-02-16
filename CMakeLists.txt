@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.9)
 PROJECT (aruco_test)
 find_package(OpenCV REQUIRED)
 set( NAME_SRC
-        charuco_board/detect_board_charuco.cpp)
+        aruco_test/charuco_board/detect_board_charuco.cpp)
 
 INCLUDE_DIRECTORIES( ${CMAKCMAKE_BINARY_DIRE_CURRENT_SOURCE_DIR}/include )
 link_directories( ${CMAKE_BINARY_DIR}/bin)
