@@ -1,16 +1,28 @@
 cmake_minimum_required(VERSION 3.9)
 PROJECT (aruco_test)
 find_package(OpenCV REQUIRED)
+find_package(Protobuf REQUIRED)
 set( NAME_SRC
-        aruco_test/charuco_board/detect_board_charuco.cpp)
+        aruco_test/charuco_board/detect_board_charuco.cpp
+        aruco_test/gen/pose.pb.cc aruco_test/gen/pose.pb.cc)
 
-INCLUDE_DIRECTORIES( ${CMAKCMAKE_BINARY_DIRE_CURRENT_SOURCE_DIR}/include )
+
+include_directories(${PROTOBUF_INCLUDE_DIRS})
+INCLUDE_DIRECTORIES(${CMAKCMAKE_BINARY_DIRE_CURRENT_SOURCE_DIR}/include )
 link_directories( ${CMAKE_BINARY_DIR}/bin)
+
+
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/bin)
 add_executable( aruco_test ${NAME_SRC})
+
+find_package(cppzmq)
+include_directories(${cppzmq_INCLUDE_DIR})
+target_link_libraries(aruco_test ${cppzmq_LIBRARY})
+target_link_libraries(aruco_test ${PROTOBUF_LIBRARIES})
+
+
+
 target_link_libraries( aruco_test ${OpenCV_LIBS})
-
-
 
 #Above is used for detect_board_charuco.cpp
 #Program Arguments for Charuco board: -dp="_path_/detector_params." -w=5 -h=7 -sl=0.04 -ml=0.02 -d=10 -r
