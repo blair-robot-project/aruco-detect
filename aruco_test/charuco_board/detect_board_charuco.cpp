@@ -10,6 +10,7 @@ using namespace std;
 using namespace cv;
 using namespace proto;
 
+
 namespace {
     const char *about = "Pose estimation using a ChArUco board";
     const char *keys =
@@ -153,7 +154,6 @@ int main(int argc, const char *const argv[]){
 
 
     std::string msg_str;
-    zmq::message_t request;
 
     //  Prepare our context and socket
     zmq::context_t context(1);
@@ -240,22 +240,30 @@ int main(int argc, const char *const argv[]){
 
         if (validPose) {
             aruco::drawAxis(imageCopy, camMatrix, distCoeffs, rvec, tvec, axisLength);
+
+
+            msg_str = pose.SerializeAsString();
+
+            zmq::message_t request(msg_str.size());
+
+
+            memcpy((void*) request.data(), msg_str.c_str(), msg_str.size());
+
+
+//            cout << "sending " << "\""<<
+//                 std::string(static_cast<char*>(request.data()), request.size()) <<"\" size: " << request.size() << endl;
+
+            socket.send(request);
         }
         imshow("out", imageCopy);
 
-        pose.SerializeToString(&msg_str);
-
-        memcpy(request.data(), msg_str.c_str(), msg_str.size());
-
-        cout << "Sending message " << "\""<<
-             std::string((char*)request.data()) <<"\""<< endl;
-
-        socket.send(request);
 
         char key = (char) waitKey(waitTime);
         if (key == 27) break;
-    }
 
+
+
+    }
 
     google::protobuf::ShutdownProtobufLibrary();
 }
