@@ -28,7 +28,6 @@ namespace {
                     "{rs       |       | Apply refind strategy }"
                     "{r        |       | show rejected candidates too }";
 }
-
 /**
  */
 static bool readCameraParameters(string filename, Mat &camMatrix, Mat &distCoeffs) {
@@ -110,11 +109,14 @@ int main(int argc, const char *const argv[]){
 
     Mat camMatrix, distCoeffs;
     if (parser.has("c")) {
+        cout<< "reading camera parameters" << endl;
+        cout << parser.get<string>("c") << endl;
         bool readOk = readCameraParameters(parser.get<string>("c"), camMatrix, distCoeffs);
         if (!readOk) {
             cerr << "Invalid camera file" << endl;
             return 0;
         }
+        cout<< camMatrix.total()  << endl;
     }
 
     Ptr<aruco::DetectorParameters> detectorParams = aruco::DetectorParameters::create();
@@ -125,21 +127,6 @@ int main(int argc, const char *const argv[]){
             return 0;
         }
     }
-
-    Mat cameraMatrix, distCoeff;
-
-    const string inputSettingsFile = "default.yml";
-
-    FileStorage fs(inputSettingsFile, FileStorage::READ); // Read the settings
-    if (!fs.isOpened())
-    {
-        cout << "Could not open the configuration file: \"" << inputSettingsFile << "\"" << endl;
-        return -1;
-    }
-
-    fs["camera_matrix"] >> cameraMatrix;
-    fs["distortion_coefficients"] >> distCoeff;
-
 
 
 
@@ -165,16 +152,14 @@ int main(int argc, const char *const argv[]){
     GOOGLE_PROTOBUF_VERIFY_VERSION;
 
 
-//    std::string msg_str;
-//    zmq::message_t request;
-//
-//    //  Prepare our context and socket
-//    zmq::context_t context(1);
-//    // Note we use here a PAIR socket, only 1 way message
-//    zmq::socket_t socket(context, ZMQ_PAIR);
-//
-//    std::cout << "Connecting to server" << std::endl;
-//    socket.connect("tcp://10.4.49.2:5555");
+    std::string msg_str;
+    zmq::message_t request;
+
+    //  Prepare our context and socket
+    zmq::context_t context(1);
+    zmq::socket_t socket(context, ZMQ_PAIR);
+    std::cout << "Connecting to server" << std::endl;
+    socket.connect("tcp://127.0.0.1:5000");
 
 
 
@@ -188,6 +173,7 @@ int main(int argc, const char *const argv[]){
 
     double totalTime = 0;
     int totalIterations = 0;
+    CameraPose pose;
 
     while (inputVideo.grab()) {
         Mat image, imageCopy;
@@ -218,13 +204,16 @@ int main(int argc, const char *const argv[]){
 
         // estimate charuco board pose
         bool validPose = false;
-        if (camMatrix.total() != 0)
+        if (camMatrix.total() != 0){
+            //tvec translation vector, rvec rotation vector
             validPose = aruco::estimatePoseCharucoBoard(charucoCorners, charucoIds, charucoboard,
                                                         camMatrix, distCoeffs, rvec, tvec);
-        if(validPose){
-            cout <<" Pose found" << endl;
+            if(validPose){
+                pose.set_x(tvec[0]);
+                pose.set_y(tvec[1]);
+                pose.set_z(tvec[2]);
+            }
         }
-
 
         double currentTime = ((double) getTickCount() - tick) / getTickFrequency();
         totalTime += currentTime;
@@ -249,15 +238,19 @@ int main(int argc, const char *const argv[]){
             aruco::drawDetectedCornersCharuco(imageCopy, charucoCorners, charucoIds, color);
         }
 
-        if (validPose)
+        if (validPose) {
             aruco::drawAxis(imageCopy, camMatrix, distCoeffs, rvec, tvec, axisLength);
-
+        }
         imshow("out", imageCopy);
 
+        pose.SerializeToString(&msg_str);
 
-//        memcpy(request.data(), msg_str.c_str(), msg_str.size());
-//        cout << "Sending message " << request.data() << endl;
-//        socket.send(request);
+        memcpy(request.data(), msg_str.c_str(), msg_str.size());
+
+        cout << "Sending message " << "\""<<
+             std::string((char*)request.data()) <<"\""<< endl;
+
+        socket.send(request);
 
         char key = (char) waitKey(waitTime);
         if (key == 27) break;
