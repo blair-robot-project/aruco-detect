@@ -1,10 +1,14 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/aruco.hpp>
 #include <vector>
+#include "../gen/pose.pb.h"
+
 #include <iostream>
+#include <zmq.hpp>
 
 using namespace std;
 using namespace cv;
+using namespace proto;
 
 namespace {
 	const char* about = "Pose estimation using a ArUco Planar Grid board";
@@ -69,7 +73,7 @@ static bool readDetectorParameters(string filename, Ptr<aruco::DetectorParameter
 
 /**
  */
-int main(int argc, char *argv[]) {
+int main(int argc, const char *const argv[]) {
 	CommandLineParser parser(argc, argv, keys);
 	parser.about(about);
 
@@ -116,6 +120,7 @@ int main(int argc, char *argv[]) {
 		return 0;
 	}
 
+    CameraPose pose;
 	Ptr<aruco::Dictionary> dictionary =
 			aruco::getPredefinedDictionary(aruco::PREDEFINED_DICTIONARY_NAME(dictionaryId));
 
@@ -128,6 +133,17 @@ int main(int argc, char *argv[]) {
 		inputVideo.open(camId);
 		waitTime = 10;
 	}
+
+	GOOGLE_PROTOBUF_VERIFY_VERSION;
+
+	std::string msg_str;
+
+	//  Prepare our context and socket
+	zmq::context_t context(1);
+	zmq::socket_t socket(context, ZMQ_PAIR);
+	std::cout << "Connecting to server" << std::endl;
+	socket.connect("tcp://127.0.0.1:5000");
+
 
 	float axisLength = 0.5f * ((float)min(markersX, markersY) * (markerLength + markerSeparation) +
 	                           markerSeparation);
@@ -181,9 +197,22 @@ int main(int argc, char *argv[]) {
 		if(showRejected && rejected.size() > 0)
 			aruco::drawDetectedMarkers(imageCopy, rejected, noArray(), Scalar(100, 0, 255));
 
-		if(markersOfBoardDetected > 0)
-			aruco::drawAxis(imageCopy, camMatrix, distCoeffs, rvec, tvec, axisLength);
+		if(markersOfBoardDetected > 0) {
+                aruco::drawAxis(imageCopy, camMatrix, distCoeffs, rvec, tvec, axisLength);
 
+                msg_str = pose.SerializeAsString();
+
+                zmq::message_t request(msg_str.size());
+
+
+                memcpy((void*) request.data(), msg_str.c_str(), msg_str.size());
+
+
+//            cout << "sending " << "\""<<
+//                 std::string(static_cast<char*>(request.data()), request.size()) <<"\" size: " << request.size() << endl;
+
+                socket.send(request);
+            }
 		imshow("out", imageCopy);
 		char key = (char)waitKey(waitTime);
 		if(key == 27) break;

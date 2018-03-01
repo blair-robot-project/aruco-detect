@@ -30,6 +30,7 @@ namespace {
 					"{r        |       | show rejected candidates too }";
 }
 /**
+ * -w=5 -h=7 -sl=.033 -ml=.025 -d=11 -dp="/home/paragon/CLionProjects/aruco-detect/aruco_test/charuco_board/detector_params.yml" -c="/home/paragon/CLionProjects/aruco-detect/aruco_test/charuco_board/default.yml"
  */
 static bool readCameraParameters(string filename, Mat &camMatrix, Mat &distCoeffs) {
 	FileStorage fs(filename, FileStorage::READ);
