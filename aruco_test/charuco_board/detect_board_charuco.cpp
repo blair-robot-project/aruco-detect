@@ -160,7 +160,7 @@ int main(int argc, const char *const argv[]){
 	zmq::context_t context(1);
 	zmq::socket_t socket(context, ZMQ_PAIR);
 	std::cout << "Connecting to server" << std::endl;
-	socket.connect("tcp://127.0.0.1:5000");
+	socket.connect("tcp://0.0.0.0:5000");
 
 
 
@@ -245,16 +245,12 @@ int main(int argc, const char *const argv[]){
 
 			msg_str = pose.SerializeAsString();
 
-			zmq::message_t request(msg_str.size());
+			zmq::message_t sendRequest(msg_str.size());
 
+            //copy serialized pose into message
+			memcpy((void*) sendRequest.data(), msg_str.c_str(), msg_str.size());
 
-			memcpy((void*) request.data(), msg_str.c_str(), msg_str.size());
-
-
-//            cout << "sending " << "\""<<
-//                 std::string(static_cast<char*>(request.data()), request.size()) <<"\" size: " << request.size() << endl;
-
-			socket.send(request);
+			socket.send(sendRequest);
 		}
 		imshow("out", imageCopy);
 

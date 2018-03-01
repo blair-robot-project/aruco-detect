@@ -3,8 +3,8 @@ PROJECT (aruco_test)
 find_package(OpenCV REQUIRED)
 find_package(Protobuf REQUIRED)
 set( NAME_SRC
-        aruco_test/aruco_board/detect_board.cpp
-        aruco_test/gen/pose.pb.cc aruco_test/gen/pose.pb.cc)
+        aruco_test/aruco_marker/detect_single.cpp
+        aruco_test/gen/pose.pb.cc aruco_test/gen/pose.pb.cc aruco_test/aruco_marker/detect_single.cpp aruco_test/aruco_marker/detect_single.h)
 
 
 include_directories(${PROTOBUF_INCLUDE_DIRS})

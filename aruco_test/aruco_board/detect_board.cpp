@@ -142,7 +142,7 @@ int main(int argc, const char *const argv[]) {
 	zmq::context_t context(1);
 	zmq::socket_t socket(context, ZMQ_PAIR);
 	std::cout << "Connecting to server" << std::endl;
-	socket.connect("tcp://127.0.0.1:5000");
+	socket.connect("tcp://0.0.0.0:5000");
 
 
 	float axisLength = 0.5f * ((float)min(markersX, markersY) * (markerLength + markerSeparation) +
@@ -194,24 +194,18 @@ int main(int argc, const char *const argv[]) {
 			aruco::drawDetectedMarkers(imageCopy, corners, ids);
 		}
 
-		if(showRejected && rejected.size() > 0)
-			aruco::drawDetectedMarkers(imageCopy, rejected, noArray(), Scalar(100, 0, 255));
-
 		if(markersOfBoardDetected > 0) {
                 aruco::drawAxis(imageCopy, camMatrix, distCoeffs, rvec, tvec, axisLength);
-
-                msg_str = pose.SerializeAsString();
-
-                zmq::message_t request(msg_str.size());
-
-
-                memcpy((void*) request.data(), msg_str.c_str(), msg_str.size());
-
-
-//            cout << "sending " << "\""<<
-//                 std::string(static_cast<char*>(request.data()), request.size()) <<"\" size: " << request.size() << endl;
-
-                socket.send(request);
+//
+//                msg_str = pose.SerializeAsString();
+//
+//                zmq::message_t request(msg_str.size());
+//
+//
+//                memcpy((void*) request.data(), msg_str.c_str(), msg_str.size());
+//
+//
+//                socket.send(request);
             }
 		imshow("out", imageCopy);
 		char key = (char)waitKey(waitTime);
