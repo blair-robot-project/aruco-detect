@@ -22,7 +22,8 @@ namespace {
                     "{c        |       | Camera intrinsic parameters. Needed for camera pose }"
                     "{l        | 0.1   | Marker side lenght (in meters). Needed for correct scale in camera pose }"
                     "{dp       |       | File of marker detector parameters }"
-                    "{r        |       | show rejected candidates too }";
+                    "{r        |       | show rejected candidates too }"
+                    "{p        |       | full ip to send packetes to ex. \"tcp://0.0.0.0:5000\"}";
 }
 
 /**
@@ -80,7 +81,7 @@ Vec3d rotationMatrixToEulerAngles(Mat &R) {
 
     double sy = sqrt(R.at<double>(0, 0) * R.at<double>(0, 0) + R.at<double>(1, 0) * R.at<double>(1, 0));
 
-    bool singular = sy < 1e-6; // If
+    bool singular = sy < 1e-6;
 
     double x, y, z;
     if (!singular) {
@@ -140,6 +141,15 @@ int main(int argc, const char *const argv[]) {
         video = parser.get<String>("v");
     }
 
+    String port;
+    if(parser.has("p")) {
+        port = parser.get<String>("p");
+    } else {
+        cerr << "No ip given" << endl;
+        return 0;
+    }
+
+
     if(!parser.check()) {
         parser.printErrors();
         return 0;
@@ -174,7 +184,8 @@ int main(int argc, const char *const argv[]) {
     zmq::context_t context(1);
     zmq::socket_t socket(context, ZMQ_PAIR);
     std::cout << "Connecting to server" << std::endl;
-    socket.connect("tcp://0.0.0.0:5000");
+
+    socket.connect(port);
 
     float axisLength = 0.5f * markerLength;
 
