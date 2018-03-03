@@ -13,23 +13,23 @@ using namespace proto;
 namespace {
     const char* about = "Pose estimation using a ArUco Planar Grid board";
     const char* keys  =
-            "{w        |       | Number of squares in X direction }"
-                    "{h        |       | Number of squares in Y direction }"
-                    "{l        |       | Marker side lenght (in pixels) }"
-                    "{s        |       | Separation between two consecutive markers in the grid (in pixels)}"
-                    "{d        |       | dictionary: DICT_4X4_50=0, DICT_4X4_100=1, DICT_4X4_250=2,"
+            "{d        |       | dictionary: DICT_4X4_50=0, DICT_4X4_100=1, DICT_4X4_250=2,"
                     "DICT_4X4_1000=3, DICT_5X5_50=4, DICT_5X5_100=5, DICT_5X5_250=6, DICT_5X5_1000=7, "
                     "DICT_6X6_50=8, DICT_6X6_100=9, DICT_6X6_250=10, DICT_6X6_1000=11, DICT_7X7_50=12,"
                     "DICT_7X7_100=13, DICT_7X7_250=14, DICT_7X7_1000=15, DICT_ARUCO_ORIGINAL = 16}"
-                    "{c        |       | Output file with calibrated camera parameters }"
                     "{v        |       | Input from video file, if ommited, input comes from camera }"
                     "{ci       | 0     | Camera id if input doesnt come from video (-v) }"
+                    "{c        |       | Camera intrinsic parameters. Needed for camera pose }"
+                    "{l        | 0.1   | Marker side lenght (in meters). Needed for correct scale in camera pose }"
                     "{dp       |       | File of marker detector parameters }"
-                    "{rs       |       | Apply refind strategy }"
                     "{r        |       | show rejected candidates too }";
 }
 
 /**
+ * command line args
+ * -ci=1 -l=.195 -d=11 -dp="/home/paragon/CLionProjects/aruco-detect/aruco_test/charuco_board/detector_params.yml" -c="/home/paragon/CLionProjects/aruco-detect/cameraParameters.yml"
+ *
+ * -c="/home/paragon/CLionProjects/aruco-detect/cameraParameters.yml"
  */
 static bool readCameraParameters(string filename, Mat &camMatrix, Mat &distCoeffs) {
     FileStorage fs(filename, FileStorage::READ);
@@ -37,6 +37,10 @@ static bool readCameraParameters(string filename, Mat &camMatrix, Mat &distCoeff
         return false;
     fs["camera_matrix"] >> camMatrix;
     fs["distortion_coefficients"] >> distCoeffs;
+
+    string s;
+    fs["cameraResolution"] >> s;
+    cout << s << endl;
     return true;
 }
 
@@ -98,21 +102,21 @@ int main(int argc, const char *const argv[]) {
     CommandLineParser parser(argc, argv, keys);
     parser.about(about);
 
-    if(argc < 7) {
+    if(argc < 2) {
         parser.printMessage();
         return 0;
     }
 
-    int markersX = parser.get<int>("w");
-    int markersY = parser.get<int>("h");
-    float markerLength = parser.get<float>("l");
-    float markerSeparation = parser.get<float>("s");
     int dictionaryId = parser.get<int>("d");
     bool showRejected = parser.has("r");
-    bool refindStrategy = parser.has("rs");
+    bool estimatePose = parser.has("c");
+    float markerLength = parser.get<float>("l");
+
+
     int camId = parser.get<int>("ci");
 
     Mat camMatrix, distCoeffs;
+
     if(parser.has("c")) {
         bool readOk = readCameraParameters(parser.get<string>("c"), camMatrix, distCoeffs);
         if(!readOk) {
@@ -145,6 +149,7 @@ int main(int argc, const char *const argv[]) {
     Mat rotationAngles;
     Vec3d taitBryanAngles;
 
+
     Ptr<aruco::Dictionary> dictionary =
             aruco::getPredefinedDictionary(aruco::PREDEFINED_DICTIONARY_NAME(dictionaryId));
 
@@ -154,12 +159,15 @@ int main(int argc, const char *const argv[]) {
         inputVideo.open(video);
         waitTime = 0;
     } else {
-        inputVideo.open(camId);
+        inputVideo.set(CV_CAP_PROP_FRAME_HEIGHT, 1920);
+        inputVideo.set(CV_CAP_PROP_FRAME_WIDTH, 1080);
+        inputVideo.open(1);
+        inputVideo.set(CV_CAP_PROP_FRAME_HEIGHT, 1920);
+        inputVideo.set(CV_CAP_PROP_FRAME_WIDTH, 1080);
+
         waitTime = 10;
     }
-
     GOOGLE_PROTOBUF_VERIFY_VERSION;
-
     std::string msg_str;
 
     //  Prepare our context and socket
@@ -168,14 +176,8 @@ int main(int argc, const char *const argv[]) {
     std::cout << "Connecting to server" << std::endl;
     socket.connect("tcp://0.0.0.0:5000");
 
+    float axisLength = 0.5f * markerLength;
 
-    float axisLength = 0.5f * ((float)min(markersX, markersY) * (markerLength + markerSeparation) +
-                               markerSeparation);
-
-    // create board object
-    Ptr<aruco::GridBoard> gridboard =
-            aruco::GridBoard::create(markersX, markersY, markerLength, markerSeparation, dictionary);
-    Ptr<aruco::Board> board = gridboard.staticCast<aruco::Board>();
 
     double totalTime = 0;
     int totalIterations = 0;
@@ -213,7 +215,7 @@ int main(int argc, const char *const argv[]) {
         }
         if(totalIterations % 30 == 0){
             for(int i = 0; i < ids.size(); i++) {
-//                cout << "Position vectors: " << tvecs[i][0] << " " << tvecs[i][1] << " " << tvecs[i][2] <<endl;
+                cout << "Position vectors: " << tvecs[i][0] << " " << tvecs[i][1] << " " << tvecs[i][2] <<endl;
 
                 pose.set_x(tvecs[i][0]);
                 pose.set_y(tvecs[i][1]);
