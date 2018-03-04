@@ -27,10 +27,8 @@ namespace {
 }
 
 /**
- * command line args
+ * example args
  * -ci=1 -l=.195 -d=11 -dp="/home/paragon/CLionProjects/aruco-detect/aruco_test/charuco_board/detector_params.yml" -c="/home/paragon/CLionProjects/aruco-detect/cameraParameters.yml"
- *
- * -c="/home/paragon/CLionProjects/aruco-detect/cameraParameters.yml"
  */
 static bool readCameraParameters(string filename, Mat &camMatrix, Mat &distCoeffs) {
     FileStorage fs(filename, FileStorage::READ);
