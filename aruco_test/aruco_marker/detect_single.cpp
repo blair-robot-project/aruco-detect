@@ -1,14 +1,16 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/aruco.hpp>
+#include <opencv2/opencv.hpp>
+#include <opencv2/aruco/charuco.hpp>
 #include <vector>
-#include "../gen/pose.pb.h"
 
 #include <iostream>
 #include <zmq.hpp>
+#include <google/protobuf/stubs/common.h>
 
 using namespace std;
 using namespace cv;
-using namespace proto;
+//using namespace proto;
 
 namespace {
     const char* about = "Pose estimation using a ArUco Planar Grid board";
@@ -22,7 +24,6 @@ namespace {
                     "{c        |       | Camera intrinsic parameters. Needed for camera pose }"
                     "{l        | 0.1   | Marker side lenght (in meters). Needed for correct scale in camera pose }"
                     "{dp       |       | File of marker detector parameters }"
-                    "{r        |       | show rejected candidates too }"
                     "{p        |       | full ip to send packetes to ex. \"tcp://0.0.0.0:5000\"}";
 }
 
@@ -74,9 +75,14 @@ static bool readDetectorParameters(string filename, Ptr<aruco::DetectorParameter
     return true;
 }
 
+
+/**
+ * Convert opencv angles to Yaw Pictch and Roll
+ *
+ * @param R Input matrix, containing rotation around x y and z in order
+ * @return the input matrix converted to Euler angles
+ */
 Vec3d rotationMatrixToEulerAngles(Mat &R) {
-
-
     double sy = sqrt(R.at<double>(0, 0) * R.at<double>(0, 0) + R.at<double>(1, 0) * R.at<double>(1, 0));
 
     bool singular = sy < 1e-6;
@@ -133,11 +139,11 @@ int main(int argc, const char *const argv[]) {
         }
     }
     detectorParams->cornerRefinementMethod = aruco::CORNER_REFINE_SUBPIX; // do corner refinement in markers
-
-    String video;
+    int video;
     if(parser.has("v")) {
-        video = parser.get<String>("v");
+        video = parser.get<int>("v");
     }
+
 
     String port;
     if(parser.has("p")) {
@@ -147,35 +153,33 @@ int main(int argc, const char *const argv[]) {
         return 0;
     }
 
-
     if(!parser.check()) {
         parser.printErrors();
         return 0;
     }
 
-    CameraPose pose;
-    Mat rotationAngles;
-    Vec3d taitBryanAngles;
+    //Pose object {x y z pitch roll yaw}
+    //CameraPose pose;
 
+    //Angles calculated, {x y z}
+    Mat rotationAngles;
+
+    //Angles we send, {pitch, roll, yaw}
+    Vec3d taitBryanAngles;
 
     Ptr<aruco::Dictionary> dictionary =
             aruco::getPredefinedDictionary(aruco::PREDEFINED_DICTIONARY_NAME(dictionaryId));
 
+    //Open a video input, if no user input exists, use default camera
     VideoCapture inputVideo;
-    int waitTime;
-    if(!video.empty()) {
+    try {
         inputVideo.open(video);
-        waitTime = 0;
-    } else {
-        inputVideo.set(CV_CAP_PROP_FRAME_HEIGHT, 1920);
-        inputVideo.set(CV_CAP_PROP_FRAME_WIDTH, 1080);
-        inputVideo.open(1);
-        inputVideo.set(CV_CAP_PROP_FRAME_HEIGHT, 1920);
-        inputVideo.set(CV_CAP_PROP_FRAME_WIDTH, 1080);
-
-        waitTime = 10;
+    }catch(const exception& e){
+        inputVideo.open(0);
     }
-    GOOGLE_PROTOBUF_VERIFY_VERSION;
+    int waitTime=10;
+
+  //  GOOGLE_PROTOBUF_VERIFY_VERSION;
     std::string msg_str;
 
     //  Prepare our context and socket
@@ -189,6 +193,7 @@ int main(int argc, const char *const argv[]) {
 
 
     double totalTime = 0;
+
     int totalIterations = 0;
 
     while(inputVideo.grab()) {
@@ -222,13 +227,14 @@ int main(int argc, const char *const argv[]) {
         for(int i = 0; i < ids.size(); i++) {
             aruco::drawAxis(imageCopy, camMatrix, distCoeffs, rvecs[i], tvecs[i], axisLength);
         }
+
         if(totalIterations % 30 == 0){
             for(int i = 0; i < ids.size(); i++) {
                 cout << "Position vectors: " << tvecs[i][0] << " " << tvecs[i][1] << " " << tvecs[i][2] <<endl;
 
-                pose.set_x(tvecs[i][0]);
-                pose.set_y(tvecs[i][1]);
-                pose.set_z(tvecs[i][2]);
+//                pose.set_x(tvecs[i][0]);
+//                pose.set_y(tvecs[i][1]);
+//                pose.set_z(tvecs[i][2]);
 
 
                 rotationAngles = Mat(rvecs[i], true);
@@ -237,15 +243,14 @@ int main(int argc, const char *const argv[]) {
 
 //                cout << "Rotation vectors: " << taitBryanAngles[0] << " " << taitBryanAngles[1] << " " << taitBryanAngles[2] << endl;
 
-                pose.set_yaw(taitBryanAngles[0]);
-                pose.set_pitch(taitBryanAngles[1]);
-                pose.set_roll(taitBryanAngles[2]);
+//                pose.set_yaw(taitBryanAngles[0]);
+//                pose.set_pitch(taitBryanAngles[1]);
+//                pose.set_roll(taitBryanAngles[2]);
 
 
-                msg_str = pose.SerializeAsString();
+//                msg_str = pose.SerializeAsString();
 
                 zmq::message_t request(msg_str.size());
-
 
                 memcpy((void*) request.data(), msg_str.c_str(), msg_str.size());
 
@@ -255,10 +260,20 @@ int main(int argc, const char *const argv[]) {
             }
 
         }
+
         imshow("out", imageCopy);
         char key = (char)waitKey(waitTime);
         if(key == 27) break;
     }
+
+    //Generate board
+//        Ptr<aruco::CharucoBoard> board = aruco::CharucoBoard::create(3, 6, .15, .13,
+//                                                                     aruco::getPredefinedDictionary(11));
+//
+//        cv::Mat outputImage;
+//        board->draw(cv::Size(800, 800), outputImage, 10, 1);
+//        imshow("board",outputImage);
+//         imwrite("/home/paragon/charucoBoards/ProposedBoard20x40.jpg", outputImage);
     return 0;
 }
 
