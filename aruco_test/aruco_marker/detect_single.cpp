@@ -7,10 +7,11 @@
 #include <iostream>
 #include <zmq.hpp>
 #include <google/protobuf/stubs/common.h>
+#include "../gen/pose.pb.h"
 
 using namespace std;
 using namespace cv;
-//using namespace proto;
+using namespace proto;
 
 namespace {
     const char* about = "Pose estimation using a ArUco Planar Grid board";
@@ -24,6 +25,7 @@ namespace {
                     "{c        |       | Camera intrinsic parameters. Needed for camera pose }"
                     "{l        | 0.1   | Marker side lenght (in meters). Needed for correct scale in camera pose }"
                     "{dp       |       | File of marker detector parameters }"
+                    "{r        |       | show rejected candidates too }"
                     "{p        |       | full ip to send packetes to ex. \"tcp://0.0.0.0:5000\"}";
 }
 
@@ -159,7 +161,7 @@ int main(int argc, const char *const argv[]) {
     }
 
     //Pose object {x y z pitch roll yaw}
-    //CameraPose pose;
+    CameraPose pose;
 
     //Angles calculated, {x y z}
     Mat rotationAngles;
@@ -179,7 +181,7 @@ int main(int argc, const char *const argv[]) {
     }
     int waitTime=10;
 
-  //  GOOGLE_PROTOBUF_VERIFY_VERSION;
+    GOOGLE_PROTOBUF_VERIFY_VERSION;
     std::string msg_str;
 
     //  Prepare our context and socket
@@ -232,9 +234,9 @@ int main(int argc, const char *const argv[]) {
             for(int i = 0; i < ids.size(); i++) {
                 cout << "Position vectors: " << tvecs[i][0] << " " << tvecs[i][1] << " " << tvecs[i][2] <<endl;
 
-//                pose.set_x(tvecs[i][0]);
-//                pose.set_y(tvecs[i][1]);
-//                pose.set_z(tvecs[i][2]);
+                pose.set_x(tvecs[i][0]);
+                pose.set_y(tvecs[i][1]);
+                pose.set_z(tvecs[i][2]);
 
 
                 rotationAngles = Mat(rvecs[i], true);
@@ -243,12 +245,12 @@ int main(int argc, const char *const argv[]) {
 
 //                cout << "Rotation vectors: " << taitBryanAngles[0] << " " << taitBryanAngles[1] << " " << taitBryanAngles[2] << endl;
 
-//                pose.set_yaw(taitBryanAngles[0]);
-//                pose.set_pitch(taitBryanAngles[1]);
-//                pose.set_roll(taitBryanAngles[2]);
+                pose.set_yaw(taitBryanAngles[0]);
+                pose.set_pitch(taitBryanAngles[1]);
+                pose.set_roll(taitBryanAngles[2]);
 
 
-//                msg_str = pose.SerializeAsString();
+                msg_str = pose.SerializeAsString();
 
                 zmq::message_t request(msg_str.size());
 
